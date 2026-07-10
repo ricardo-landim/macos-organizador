@@ -1,0 +1,21 @@
+{
+  "name": "macos-organizador",
+  "version": "0.1.0",
+  "description": "Organiza Desktop/Downloads/pastas soltas no macOS movendo (NUNCA deleta). Ancora cada item na casa canônica JÁ EXISTENTE antes de criar pasta nova. Detecta trabalho ativo, lixo regenerável, duplicatas exatas (por hash + tipo real) e segredos. Ciente do iCloud (mover para fora da área sincronizada trava no fileproviderd). Manifesto reversível, quarentena que só o humano apaga.",
+  "author": {
+    "name": "Ricardo Landim",
+    "email": "ricardolandimonly@gmail.com"
+  },
+  "homepage": "https://github.com/ricardo-landim/macos-organizador",
+  "keywords": [
+    "macos",
+    "organizacao",
+    "desktop",
+    "downloads",
+    "icloud",
+    "duplicatas",
+    "quarentena",
+    "reversivel",
+    "housekeeping"
+  ]
+}

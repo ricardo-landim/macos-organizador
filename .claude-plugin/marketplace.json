@@ -1,0 +1,21 @@
+{
+  "name": "macos-organizador",
+  "owner": {
+    "name": "Ricardo Landim"
+  },
+  "metadata": {
+    "description": "macos-organizador — organiza a máquina sem destruir contexto: move, nunca apaga; usa a casa canônica que já existe; entende iCloud.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "macos-organizador",
+      "description": "Comando /organizar + skill organizar-maquina + engine determinístico (scan/plan/apply/undo/where/status) com manifesto reversível.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Ricardo Landim"
+      },
+      "source": "."
+    }
+  ]
+}
