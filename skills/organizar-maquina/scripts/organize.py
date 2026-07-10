@@ -568,7 +568,7 @@ def detect_garbage(entry: dict, installed: set):
 
     # 5. Instalador re-baixável (cruza com apps instalados pra dar contexto)
     if not is_dir and ext in INSTALLER_EXTS:
-        stem = re.split(r"[ _\-.0-9]", name.lower(), 1)[0]
+        stem = re.split(r"[ _\-.0-9]", name.lower(), maxsplit=1)[0]
         match = ""
         if stem and len(stem) >= 3:
             for app in installed:
