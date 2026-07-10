@@ -15,6 +15,7 @@ Organiza arquivos soltos sem destruir contexto de trabalho. Move, nunca deleta. 
 4. **Dúvida sinaliza, não chuta.** Confiança < 0.50 vai pra `_inbox/duvidas/` em vez de adivinhar destino. Ricardo revisa manualmente.
 5. **Relatório explica onde está cada coisa.** Markdown em `~/Desktop/_organize-report-{ts}.md` agrupado por pasta destino + reversão em uma linha.
 6. **Lixo e duplicata NÃO são apagados — vão pra quarentena.** A skill identifica o que é lixo/cópia e MOVE pra `~/Documents/Organizado/_REVISAR-EXCLUIR/`. **Quem deleta é o Ricardo**, manualmente, depois de conferir. Reversível via `undo` até ele apagar. Esse é o jeito de "eliminar" sem violar a regra de zero deleção.
+7. **Segredo não sai do lugar.** Arquivo de credencial (`.env*`, chave SSH privada, `.pem`/`.p12`/`.tfstate`, conteúdo PEM de chave privada) é detectado e RETIDO onde está: o destino (`~/Documents/`) sincroniza com iCloud e mover pra lá vazaria o segredo pra outro storage. O plano lista cada um pro humano guardar em cofre e apagar a cópia solta.
 
 ## Quando esta skill é invocada
 
@@ -77,6 +78,7 @@ Quando invocada, Claude DEVE:
    - Total de itens + breakdown HIGH/MID/LOW
    - Lista de clusters ATIVOS (esses ele provavelmente está trabalhando agora — destacar!)
    - Itens LOW destacados (precisam revisão)
+   - Segredos retidos (se houver): avisar que ficaram no lugar e por quê
    - Path do plano e do relatório (Ricardo abre no Finder se quiser detalhe)
 3. **Para clusters ativos**: explicar que vão pra `~/Desktop/_ativo-{tema}/` pra preservar fluxo. Citar o tema.
 4. **Para itens LOW**: listar nominalmente. "Achei N arquivos com baixa confiança: X, Y, Z. Por padrão vão pra `_inbox/duvidas/` pra você revisar manualmente. Quer que eu force destino específico em algum?"
