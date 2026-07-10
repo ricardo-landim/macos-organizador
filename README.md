@@ -175,7 +175,7 @@ run e continuam no engine. É o roadmap da **v0.2**:
 | 2 | **"Pasta vazia"** olha só `du` e ignora subpastas nomeadas com intenção. | Duas pastas de projeto iam pra fila de exclusão. |
 | 3 | **"Instalador re-baixável"** assume que todo `.dmg` se re-baixa. | Builds privados de um app que esta máquina não compila eram irreproduzíveis. |
 | 4 | **Casa canônica** ainda não é buscada pelo engine: ele força `~/Documents/Organizado/`. | Mídia, notas e métricas já tinham casa; o plano criava estrutura paralela. |
-| 5 | **Segredos** não são detectados e iriam pra quarentena, que fica no iCloud. | 4 arquivos de credencial viva num Desktop sincronizado. |
+| 5 | ~~**Segredos** não são detectados e iriam pra quarentena, que fica no iCloud.~~ **Resolvido**: segredo detectado (nome ou cabeçalho PEM) fica onde está e é listado no relatório. | 4 arquivos de credencial viva num Desktop sincronizado. |
 | 6 | **Tamanho** de diretório subestimado (soma rasa em vez de `du` real). | Snapshots reportados 2× a 14× menores. |
 
 <br>
