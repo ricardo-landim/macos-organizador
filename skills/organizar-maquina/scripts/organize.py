@@ -165,12 +165,19 @@ def ensure_runtime():
     RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
 
 
+COCKPIT_MARKER = ".organizador-cockpit"
+
+
 def is_ignored(path: Path) -> bool:
     name = path.name
     s = str(path)
     if any(re.match(p, name) for p in IGNORE_NAME_PATTERNS):
         return True
     if any(frag in s for frag in IGNORE_PATH_FRAGMENTS):
+        return True
+    # Pasta-cockpit do usuário (docs de organização, CLAUDE.md da sessão etc.):
+    # um dir marcado com .organizador-cockpit nunca entra no plano.
+    if path.is_dir() and (path / COCKPIT_MARKER).exists():
         return True
     return False
 

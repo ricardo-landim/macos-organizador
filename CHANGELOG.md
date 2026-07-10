@@ -3,6 +3,13 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/);
 versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.1.1] — 2026-07-09
+
+### Adicionado
+- **Marker `.organizador-cockpit`**: diretório que contém esse arquivo nunca entra no plano.
+  Protege pastas-cockpit do usuário (docs de organização, cockpits de projeto como o Cote.Zap)
+  de serem capturadas pelo scan — antes exigia editar o plan JSON a cada run.
+
 ## [0.1.0] — 2026-07-09
 
 ### Adicionado
