@@ -5,11 +5,24 @@ Move, nunca apaga. O que parece lixo vai pra quarentena e **só o humano deleta*
 
 ## Instalar
 
+Do repositório (privado, exige `gh auth` com acesso):
+
+```bash
+/plugin marketplace add ricardo-landim/macos-organizador
+/plugin install macos-organizador@macos-organizador
+/reload-plugins
+```
+
+Ou a partir de um clone local, útil enquanto se desenvolve:
+
 ```bash
 /plugin marketplace add ~/dev/macos-organizador
 /plugin install macos-organizador@macos-organizador
 /reload-plugins
 ```
+
+> Mexeu no clone local? O plugin carregado **não** atualiza sozinho: rode
+> `/plugin marketplace update macos-organizador` e `/reload-plugins`.
 
 ## Usar
 
