@@ -826,16 +826,25 @@ def apply_plan(plan: dict, min_confidence: float = MID_CONF, auto: bool = False)
 
         final_dest = dest
         if final_dest.exists():
+            # "Duplicata exata" aqui tem que ser byte a byte: tamanho igual +
+            # sha256 do arquivo INTEIRO. O hash de 64KB serve pra classificar,
+            # não pra decidir skip: dois arquivos com o mesmo começo e fins
+            # diferentes seriam pulados como "exata" e o conteúdo novo nunca
+            # chegaria ao destino.
             if final_dest.is_file() and src.is_file():
-                src_h = file_hash(src)
-                dest_h = file_hash(final_dest)
-                if src_h and src_h == dest_h:
-                    moves.append({
-                        "src": str(src), "dest": str(final_dest),
-                        "status": "skipped", "note": "duplicata exata já no destino",
-                        "applied_at": None,
-                    })
-                    continue
+                try:
+                    same_size = src.stat().st_size == final_dest.stat().st_size
+                except OSError:
+                    same_size = False
+                if same_size:
+                    src_h = full_file_hash(src)
+                    if src_h and src_h == full_file_hash(final_dest):
+                        moves.append({
+                            "src": str(src), "dest": str(final_dest),
+                            "status": "skipped", "note": "duplicata exata já no destino",
+                            "applied_at": None,
+                        })
+                        continue
             stem = final_dest.stem
             suffix = final_dest.suffix
             ts_label = datetime.fromtimestamp(item["mtime"]).strftime("%Y%m%d-%H%M%S")
