@@ -260,6 +260,12 @@ def longest_common_prefix(strs: list) -> str:
 
 def scan_path(p: Path) -> Optional[dict]:
     """Coleta metadata de arquivo OU diretório top-level."""
+    # Symlink fica fora do plano: resolve() apontaria o move pro ALVO do link,
+    # e o apply arrancaria um projeto inteiro do lugar (ex.: link no Desktop
+    # pra ~/dev/foo moveria ~/dev/foo). Mover o link em si também não é seguro
+    # (link relativo quebra ao mudar de pasta). Link não ocupa espaço: fica.
+    if p.is_symlink():
+        return None
     try:
         st = p.stat()
     except (FileNotFoundError, PermissionError, OSError):

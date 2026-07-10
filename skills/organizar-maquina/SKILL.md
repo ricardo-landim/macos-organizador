@@ -221,6 +221,7 @@ Pra achar arquivo X: `/organizar --where X`
 - Hash de classificação trunca em 64KB. **Mas a dedup usa sha256 do arquivo INTEIRO** (só entre arquivos de tamanho idêntico, pra ser rápido) — duplicata confirmada é byte-a-byte, sem falso-positivo.
 - Assinatura de pasta (dedup de diretório) só vale pra pastas com ≤ 5000 arquivos (acima disso o walk é parcial e a dedup é pulada por segurança).
 - macOS bundles (`.app`, `.bundle`, `.framework`) tratados como arquivo (não desce dentro).
+- Symlinks não entram no plano (ficam onde estão): mover o alvo arrancaria um projeto do lugar e mover o link quebraria links relativos.
 - Não toca em `~/Library/`, `.git/`, `node_modules/`, `.claude/`, `.Trash/`, `.cache/`, `.npm/`.
 - Cross-filesystem move funciona via `shutil.move` (copy+remove). Se origem em volume diferente do destino, demora mais.
 
