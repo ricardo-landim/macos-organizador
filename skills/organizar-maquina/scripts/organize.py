@@ -73,6 +73,20 @@ BUILD_ARTIFACT_DIRS = {
 # Nome com cara de cópia — desempata qual exemplar é o canônico a MANTER na dedup.
 COPY_HINT_RE = re.compile(r"(?i)(c[oó]pia|\bcopy\b|\(\d+\)|[ _-]\d+(\.[^.]+)?$)")
 
+# Arquivo de credencial: NUNCA sai do lugar. Mover segredo pra ~/Documents
+# (área sincronizada com iCloud) vaza a credencial pra outro storage.
+# Lista curta e de alta precisão: .key fica de fora (colide com Keynote);
+# chave privada com nome atípico é pega pelo cabeçalho PEM em detect_secret().
+SECRET_NAME_RE = re.compile(
+    r"(?i)^("
+    r"\.env(\..+)?"                       # .env, .env.local, .env.production
+    r"|id_(rsa|dsa|ecdsa|ed25519)"        # chave SSH privada (a .pub é pública)
+    r"|\.netrc"
+    r"|credentials(\.json)?"
+    r"|.*\.(pem|p12|pfx|keystore|jks|tfstate)"
+    r")$"
+)
+
 IGNORE_NAME_PATTERNS = [
     r"^\.DS_Store$",
     r"^\.Spotlight-V100$",
@@ -260,6 +274,12 @@ def longest_common_prefix(strs: list) -> str:
 
 def scan_path(p: Path) -> Optional[dict]:
     """Coleta metadata de arquivo OU diretório top-level."""
+    # Symlink fica fora do plano: resolve() apontaria o move pro ALVO do link,
+    # e o apply arrancaria um projeto inteiro do lugar (ex.: link no Desktop
+    # pra ~/dev/foo moveria ~/dev/foo). Mover o link em si também não é seguro
+    # (link relativo quebra ao mudar de pasta). Link não ocupa espaço: fica.
+    if p.is_symlink():
+        return None
     try:
         st = p.stat()
     except (FileNotFoundError, PermissionError, OSError):
@@ -548,7 +568,7 @@ def detect_garbage(entry: dict, installed: set):
 
     # 5. Instalador re-baixável (cruza com apps instalados pra dar contexto)
     if not is_dir and ext in INSTALLER_EXTS:
-        stem = re.split(r"[ _\-.0-9]", name.lower(), 1)[0]
+        stem = re.split(r"[ _\-.0-9]", name.lower(), maxsplit=1)[0]
         match = ""
         if stem and len(stem) >= 3:
             for app in installed:
@@ -559,6 +579,22 @@ def detect_garbage(entry: dict, installed: set):
             return ("instaladores", f"instalador — app '{match}' já instalado (re-baixável)")
         return ("instaladores", "instalador re-baixável (confirme se ainda precisa)")
 
+    return None
+
+
+def detect_secret(entry: dict) -> Optional[str]:
+    """Retorna o motivo se o item é arquivo de credencial, senão None.
+    Quem chama RETÉM o item no lugar (não move) e lista no relatório.
+    Resolve o defeito #5 da run real de 2026-06-14 (credenciais indo pro iCloud)."""
+    if entry["is_dir"]:
+        return None
+    if SECRET_NAME_RE.match(entry["name"]):
+        return "nome de arquivo de credencial"
+    # Chave privada com nome atípico: cabeçalho PEM nos primeiros bytes.
+    if entry["ext"] in ("", ".key", ".pem", ".txt") and 0 < entry["size"] < 1_000_000:
+        head = file_sample(Path(entry["path"]))
+        if "-----begin" in head and "private key" in head:
+            return "conteúdo PEM de chave privada"
     return None
 
 
@@ -698,8 +734,21 @@ def make_plan(entries: list, days_active: int, dest_root: Path,
     installed = installed_apps() if do_trash else set()
 
     items = []
+    secrets = []
     for c in clusters:
         for entry in c["files"]:
+            # --- Segredo: fica onde está (vem antes de tudo; nem quarentena
+            # nem _inbox, que moram na área sincronizada com iCloud) ---
+            sec_reason = detect_secret(entry)
+            if sec_reason:
+                secrets.append({
+                    "path": entry["path"],
+                    "name": entry["name"],
+                    "size": entry["size"],
+                    "reason": sec_reason,
+                })
+                continue
+
             # --- Quarentena: duplicata (prioridade máxima) ---
             if do_dedup and entry["path"] in dup_map:
                 dreason, canonical = dup_map[entry["path"]]
@@ -768,6 +817,7 @@ def make_plan(entries: list, days_active: int, dest_root: Path,
         "dups": sum(1 for i in review_items if i["review_bucket"] == "dup"),
         "trash": sum(1 for i in review_items if i["review_bucket"] == "trash"),
         "review_reclaim_bytes": sum(i["size"] for i in review_items),
+        "secrets": len(secrets),
     }
 
     return {
@@ -776,6 +826,7 @@ def make_plan(entries: list, days_active: int, dest_root: Path,
         "dest_root": str(dest_root),
         "review_root": str(review_root),
         "items": items,
+        "secrets": secrets,
         "stats": stats,
     }
 
@@ -820,16 +871,25 @@ def apply_plan(plan: dict, min_confidence: float = MID_CONF, auto: bool = False)
 
         final_dest = dest
         if final_dest.exists():
+            # "Duplicata exata" aqui tem que ser byte a byte: tamanho igual +
+            # sha256 do arquivo INTEIRO. O hash de 64KB serve pra classificar,
+            # não pra decidir skip: dois arquivos com o mesmo começo e fins
+            # diferentes seriam pulados como "exata" e o conteúdo novo nunca
+            # chegaria ao destino.
             if final_dest.is_file() and src.is_file():
-                src_h = file_hash(src)
-                dest_h = file_hash(final_dest)
-                if src_h and src_h == dest_h:
-                    moves.append({
-                        "src": str(src), "dest": str(final_dest),
-                        "status": "skipped", "note": "duplicata exata já no destino",
-                        "applied_at": None,
-                    })
-                    continue
+                try:
+                    same_size = src.stat().st_size == final_dest.stat().st_size
+                except OSError:
+                    same_size = False
+                if same_size:
+                    src_h = full_file_hash(src)
+                    if src_h and src_h == full_file_hash(final_dest):
+                        moves.append({
+                            "src": str(src), "dest": str(final_dest),
+                            "status": "skipped", "note": "duplicata exata já no destino",
+                            "applied_at": None,
+                        })
+                        continue
             stem = final_dest.stem
             suffix = final_dest.suffix
             ts_label = datetime.fromtimestamp(item["mtime"]).strftime("%Y%m%d-%H%M%S")
@@ -987,6 +1047,7 @@ def render_plan_report(plan: dict, out_path: Path):
         f"- Clusters ativos: **{plan['stats']['active_clusters']}** / {plan['stats']['total_clusters']}",
         f"- 🗑 Duplicatas + lixo: **{plan['stats'].get('dups', 0) + plan['stats'].get('trash', 0)}** "
         f"({fmt_size(plan['stats'].get('review_reclaim_bytes', 0))}) → `{REVIEW_DIR_NAME}/` (você exclui manual)",
+        f"- \U0001F510 Segredos: **{plan['stats'].get('secrets', 0)}** ficam onde estão (nunca vão pro iCloud)",
         "",
         "## Como aplicar",
         "",
@@ -1016,6 +1077,20 @@ def render_plan_report(plan: dict, out_path: Path):
             active_by_slug.setdefault(slug, {"tema": item["cluster_tema"], "items": []})["items"].append(item)
         else:
             inactive_items.append(item)
+
+    # Segredos: retidos no lugar, listados pro humano decidir o que fazer.
+    if plan.get("secrets"):
+        lines.extend([
+            "## \U0001F510 Segredos detectados: ficam onde estão",
+            "",
+            "Arquivo de credencial **não é movido**: o destino (`~/Documents/`) "
+            "sincroniza com iCloud e mover pra lá vaza o segredo pra outro storage. "
+            "Guarde num cofre (1Password, Keychain) e apague a cópia solta você mesmo.",
+            "",
+        ])
+        for s in plan["secrets"]:
+            lines.append(f"- \U0001F511 `{s['path']}` ({fmt_size(s['size'])}): {s['reason']}")
+        lines.append("")
 
     # Seção de quarentena (vem primeiro: é o que o humano vai conferir e apagar).
     if review_items:
@@ -1243,6 +1318,8 @@ def cmd_plan(args):
     print(f"  - clusters ativos: {s['active_clusters']}/{s['total_clusters']}")
     print(f"  - quarentena: {s.get('dups', 0)} dups + {s.get('trash', 0)} lixo "
           f"({fmt_size(s.get('review_reclaim_bytes', 0))}) → {REVIEW_DIR_NAME}/")
+    if s.get("secrets"):
+        print(f"  - segredos: {s['secrets']} retidos no lugar (nunca movidos pro iCloud)")
     print(f"Plan JSON: {plan_path}")
     print(f"Relatório: {report_path}")
     print("---JSON---")

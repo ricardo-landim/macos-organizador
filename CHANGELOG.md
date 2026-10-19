@@ -3,6 +3,34 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/);
 versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [Não lançado]
+
+### Adicionado
+- **Segredos ficam onde estão** (defeito #5 da run de 2026-06-14). Arquivo de credencial
+  (`.env*`, chave SSH privada, `.netrc`, `credentials.json`, `.pem`/`.p12`/`.pfx`/
+  `.keystore`/`.jks`/`.tfstate`, ou conteúdo com cabeçalho PEM de chave privada) é
+  detectado no `plan` e **retido no lugar**: nem quarentena nem `_inbox`, que moram
+  em `~/Documents/` e sincronizam com iCloud. O relatório ganha a seção
+  "Segredos detectados" listando cada um pro humano guardar em cofre. `.key` fica
+  fora da lista por nome (colide com Keynote); chave renomeada é pega pelo cabeçalho.
+- **`tests/test_organize.py`**: suíte unittest (stdlib, zero dependência) cobrindo
+  symlink fora do plano, colisão por hash completo e retenção de segredos.
+  `python3 -m unittest discover tests`.
+
+### Corrigido
+- **Symlink no Desktop movia o ALVO do link.** O scan usava `resolve()`, então um link
+  pra `~/dev/foo` entrava no plano como `~/dev/foo` e o `apply` arrancava o projeto
+  inteiro do lugar, deixando o link quebrado. Reproduzido em sandbox: o diretório-alvo
+  sumiu da origem e foi parar em `_inbox/duvidas/`. Agora symlink não entra no plano
+  (fica onde está, link não ocupa espaço).
+- **Colisão de nome no destino pulava arquivo diferente como "duplicata exata".**
+  O `apply` comparava só o hash dos primeiros 64KB: dois arquivos com o mesmo começo
+  e fins diferentes eram pulados como "exata" e o conteúdo novo nunca chegava ao
+  destino (quem confiasse no rótulo e apagasse a origem perderia o dado). Agora o
+  skip exige tamanho igual + sha256 do arquivo inteiro; caso contrário renomeia com
+  timestamp, como qualquer colisão.
+- `DeprecationWarning` do `re.split` (maxsplit posicional) em `detect_garbage`.
+
 ## [0.1.1] — 2026-07-09
 
 ### Adicionado
